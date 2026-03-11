@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
+
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!username || !password) {
@@ -15,16 +17,13 @@ export default function Login() {
     }
 
     setError("");
-
-    // Example request body that matches your mongoose model
-    const loginData = {
+    const response = await axios.post("http://localhost:3000/login", {
       username,
-      password,
-    };
+      password
+    });
 
-    console.log("Login:", loginData);
-
-    // TODO: send loginData to backend
+    localStorage.setItem("token", response.data.token);
+    
   };
 
   return (

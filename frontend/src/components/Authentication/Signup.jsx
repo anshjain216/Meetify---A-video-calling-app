@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 export function Signup() {
   const [name, setName] = useState("");
@@ -7,7 +8,7 @@ export function Signup() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!name || !username || !password) {
@@ -17,7 +18,14 @@ export function Signup() {
 
     setError("");
 
-   
+    const response = await axios.post("http://localhost:3000/register", {
+      name,
+      username,
+      password
+    });
+
+    localStorage.setItem("token", response.data.token);
+
   };
 
   return (
