@@ -1,12 +1,20 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useContext, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { AuthContext } from "../../context/AuthContext";
+
+
+
 
 export function Signup() {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const { setUser, setUserAvailable } = useContext(AuthContext);
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +33,13 @@ export function Signup() {
     });
 
     localStorage.setItem("token", response.data.token);
-
+    setUser({
+  name: response.data.result.name,
+  avatar: response.data.result.name.charAt(0).toUpperCase(),
+  status: "Online"
+});
+setUserAvailable(true);
+    navigate("/home");
   };
 
   return (

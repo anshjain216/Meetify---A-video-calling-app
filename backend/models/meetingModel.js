@@ -1,8 +1,8 @@
 import mongoose, {Schema} from "mongoose";
 
 const meetingSchema = new Schema({
-    user_id:{type:String},
-    meetingCode:{type:String,required:true},
+    user_id:{type:mongoose.Schema.Types.ObjectId,ref:"user"},
+    meetingId:{type:String,required:true},
     date: {type:Date,default:Date.now,required:true}
 })
 

@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const { setUser, setUserAvailable } = useContext(AuthContext);
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +29,14 @@ export default function Login() {
     });
 
     localStorage.setItem("token", response.data.token);
-    
+
+setUser({
+  name: response.data.user.name,
+  avatar: response.data.user.name.charAt(0).toUpperCase(),
+  status: "Online"
+});
+setUserAvailable(true);
+    navigate("/home");
   };
 
   return (

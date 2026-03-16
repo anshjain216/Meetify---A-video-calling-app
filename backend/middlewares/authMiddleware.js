@@ -7,7 +7,7 @@ export const authMiddleware = (req,res,next)=>{
     }
     try{
         const token = header.split(" ")[1];
-        const decoded = jwt.verify(jwt,process.env.JWT_KEY);
+        const decoded = jwt.verify(token,process.env.JWT_KEY);
         req.user = decoded;
         next();
     }catch(err){

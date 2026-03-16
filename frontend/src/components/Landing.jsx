@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+
 /* ── Google Font injected once ── */
 const FontLink = () => {
   useEffect(() => {
@@ -157,6 +160,7 @@ function FloatCard({ icon, iconBg, label, sub, posClass, floatClass }) {
 
 /* ── Main Component ── */
 export default function Landing() {
+  const { user, userAvailable, setUserAvailable, setUser } = useContext(AuthContext);
   return (
     <div className="font-outfit min-h-screen overflow-x-hidden" style={{ background: "#fdf8f2", color: "#1a1108" }}>
       <FontLink />
@@ -180,52 +184,83 @@ export default function Landing() {
         </div>
         <div className="flex items-center gap-1">
 
-  {/* Join as Guest */}
-  <a
-    href="#"
-    className="font-outfit font-medium rounded-full transition-all hover:bg-stone-100"
-    style={{
-      color: "#9b8060",
-      fontSize: 14,
-      padding: "8px 16px",
-      textDecoration: "none"
-    }}
-  >
-    Join as Guest
-  </a>
+          {/* Join as Guest */}
+          {!userAvailable ? (<><Link to="/home" className="font-outfit font-medium rounded-full transition-all hover:bg-stone-100"
+            style={{
+              color: "#9b8060",
+              fontSize: 14,
+              padding: "8px 16px",
+              textDecoration: "none"
+            }}
+          >Join as Guest</Link>
 
   {/* Register */}
-  <Link
-    to="/signup"
-    className="font-outfit font-medium rounded-full transition-all hover:bg-stone-100"
-    style={{
-      color: "#9b8060",
-      fontSize: 14,
-      padding: "8px 16px",
-      textDecoration: "none"
-    }}
-  >
-    Register
-  </Link>
+          <Link
+            to="/signup"
+            className="font-outfit font-medium rounded-full transition-all hover:bg-stone-100"
+            style={{
+              color: "#9b8060",
+              fontSize: 14,
+              padding: "8px 16px",
+              textDecoration: "none"
+            }}
+          >
+            Register
+          </Link>
 
-  {/* Login Button */}
-  <Link to="/login">
-    <div
-      className="font-outfit font-semibold rounded-full transition-all hover:-translate-y-0.5"
-      style={{
-        background: "#1a1108",
-        color: "#fdf8f2",
-        fontSize: 14,
-        padding: "9px 18px",
-        textDecoration: "none",
-        boxShadow: "0 4px 16px rgba(26,17,8,.2)"
-      }}
-    >
-      Login
-    </div>
-  </Link>
+          {/* Login Button */}
+          <Link to="/login">
+            <div
+              className="font-outfit font-semibold rounded-full transition-all hover:-translate-y-0.5"
+              style={{
+                background: "#1a1108",
+                color: "#fdf8f2",
+                fontSize: 14,
+                padding: "9px 18px",
+                textDecoration: "none",
+                boxShadow: "0 4px 16px rgba(26,17,8,.2)"
+              }}
+            >
+              Login
+            </div>
+          </Link></>):
+          (<><div className="flex items-center gap-3 cursor-pointer px-3 py-1.5 pl-1.5 rounded-full transition-colors hover:bg-[#e8521a]/[0.07]">
+            <div className="w-[38px] h-[38px] rounded-full bg-gradient-to-br from-[#e8521a] to-[#f0844a] flex items-center justify-center text-white font-bold text-sm tracking-wide flex-shrink-0">
+              {user.avatar}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[13.5px] font-medium text-[#1a1a1a] leading-tight">
+                {user.name}
+              </span>
+              <span className="flex items-center gap-1 text-[11.5px] text-[#888]">
+                <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(52,211,153,0.25)]" />
+                {user.status}
+              </span>
+            </div>
+          </div>
+        <button className="flex items-center gap-1.5 text-[13.5px] font-medium text-[#555] px-4 py-2 rounded-full hover:bg-[#e8521a]/[0.07] hover:text-[#e8521a] transition-colors cursor-pointer border-none bg-transparent">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
+                    </svg>
+                    History
+                </button>
 
-</div>
+                <button
+                    onClick={() => {
+                        localStorage.removeItem("token");
+                        setUserAvailable(false);
+                        setUser({ name: "Guest", avatar: "G", status: "Online" });
+                    }}
+                    className="flex items-center gap-1.5 text-[13.5px] font-medium text-[#e8521a] px-4 py-2 rounded-full border border-[#e8521a]/30 hover:bg-[#e8521a] hover:text-white transition-all cursor-pointer bg-transparent"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M18 12H9m0 0 3-3m-3 3 3 3" />
+                    </svg>
+                    Logout
+                </button></>)}
+
+
+        </div>
       </nav>
 
       {/* ── HERO ── */}
@@ -261,22 +296,14 @@ export default function Landing() {
 
           {/* CTA Row */}
           <div className="animate-rise-4 flex items-center gap-4" style={{ opacity: 0 }}>
-            <a href="#" className="btn-glow inline-flex items-center gap-2 font-outfit font-semibold rounded-2xl transition-all hover:-translate-y-1"
+            <Link to="/login" className="btn-glow inline-flex items-center gap-2 font-outfit font-semibold rounded-2xl transition-all hover:-translate-y-1"
               style={{ background: "linear-gradient(135deg,#e8783a,#e85d3a)", color: "white", fontSize: 16, padding: "14px 28px", textDecoration: "none" }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 10l4.553-2.277A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14v-4z" />
                 <rect x="1" y="6" width="15" height="12" rx="2" />
               </svg>
               Get Started Free
-            </a>
-            <a href="#" className="group inline-flex items-center gap-3 font-outfit font-medium transition-all hover:gap-4"
-              style={{ color: "#1a1108", textDecoration: "none", fontSize: 15 }}>
-              <div className="flex items-center justify-center rounded-full border transition-all group-hover:bg-amber-500 group-hover:border-amber-500 group-hover:text-white"
-                style={{ width: 42, height: 42, background: "#f5ede0", borderColor: "rgba(26,17,8,.1)", fontSize: 10 }}>
-                ▶
-              </div>
-              Watch Demo
-            </a>
+            </Link>
           </div>
 
           {/* Trust Stats */}
@@ -313,7 +340,7 @@ export default function Landing() {
             controls={[
               { icon: "🎙️", bg: "#f4f4f4" },
               { icon: "📷", bg: "#f4f4f4" },
-              { icon: "✕",  bg: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white" },
+              { icon: "✕", bg: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white" },
               { icon: "🔊", bg: "rgba(232,120,58,.12)", color: "#e8783a" },
             ]}
           />
@@ -330,7 +357,7 @@ export default function Landing() {
             showDuration={true}
             controls={[
               { icon: "🔇", bg: "#f4f4f4" },
-              { icon: "✕",  bg: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white" },
+              { icon: "✕", bg: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white" },
               { icon: "🔈", bg: "rgba(232,120,58,.12)", color: "#e8783a" },
             ]}
           />
@@ -348,9 +375,9 @@ export default function Landing() {
       {/* ── FEATURES BAND ── */}
       <div className="relative z-10 grid" style={{ background: "#1a1108", gridTemplateColumns: "repeat(3,1fr)" }}>
         {[
-          { num: "4K",     title: "Cinema-Grade Video",   desc: "Adaptive streaming delivers the best resolution your connection can handle — always." },
-          { num: "256-bit",title: "Military Encryption",  desc: "Every call is wrapped end-to-end. Zero logs. Your conversations belong only to you." },
-          { num: "50+",    title: "Group Calling",        desc: "Bring everyone together — family, friends, or your whole team — with crystal-clear audio." },
+          { num: "4K", title: "Cinema-Grade Video", desc: "Adaptive streaming delivers the best resolution your connection can handle — always." },
+          { num: "256-bit", title: "Military Encryption", desc: "Every call is wrapped end-to-end. Zero logs. Your conversations belong only to you." },
+          { num: "50+", title: "Group Calling", desc: "Bring everyone together — family, friends, or your whole team — with crystal-clear audio." },
         ].map((f, i) => (
           <div key={i} className="group transition-colors hover:bg-white/[.03] px-10 py-14"
             style={{ borderRight: i < 2 ? "1px solid rgba(255,255,255,.07)" : "none" }}>

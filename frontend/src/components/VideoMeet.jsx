@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
-
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 const server = "http://localhost:3000";
 
@@ -111,6 +112,7 @@ function ControlBtn({ onClick, active, danger = false, children, badge = 0 }) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function VideoMeet() {
+  const { user, userAvailable, setUserAvailable, setUser } = useContext(AuthContext);
   const socketRef        = useRef(null);
   const mySocketIdRef    = useRef(null);
   const localVideoRef    = useRef(null);
@@ -118,7 +120,7 @@ export default function VideoMeet() {
   const messagesEndRef   = useRef(null);
 
   const [inLobby, setInLobby]                             = useState(true);
-  const [username, setUsername]                           = useState('');
+  const [username, setUsername]                           = useState(user.name);
 
   const [hasCameraPermission, setHasCameraPermission]     = useState(false);
   const [hasMicPermission, setHasMicPermission]           = useState(false);
@@ -380,129 +382,188 @@ export default function VideoMeet() {
 
   // ─── Render: Lobby ──────────────────────────────────────────────────────────
 
+  // ─── Render: Lobby ──────────────────────────────────────────────────────────
+
   if (inLobby) {
     return (
-      <div className="min-h-screen bg-[#fdf6ee] flex items-center justify-center px-6">
-        <div className="w-full max-w-5xl flex flex-col md:flex-row gap-12 items-center">
-
-          {/* Left: form */}
-          <div className="flex-1 space-y-7">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200">
-                <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-                  <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
-                </svg>
-              </div>
-              <span className="text-xl font-black text-gray-900 tracking-tight">Voya</span>
+      <div className="min-h-screen bg-[#fdf6ee] flex flex-col">
+        {/* ── Navbar ── */}
+        <nav className="w-full px-8 py-4 flex items-center justify-between bg-white/80 backdrop-blur border-b border-gray-100 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200">
+              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
+              </svg>
             </div>
-
-            {/* Headline */}
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-px bg-orange-400"></div>
-                <p className="text-xs font-bold tracking-widest text-orange-500 uppercase">The Future of Connection</p>
-              </div>
-              <h1 className="text-5xl font-black text-gray-900 leading-[1.1]">
-                Feel{' '}
-                <span className="text-orange-500 italic">together,</span>
-                <br />
-                <span className="font-extralight italic text-gray-600">wherever</span>
-                <br />
-                you are.
-              </h1>
-              <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-sm">
-                Voya brings people closer with breathtaking video quality, zero-lag audio, and an experience so seamless it melts the miles between you.
-              </p>
-            </div>
-
-            {/* Input + button */}
-            <div className="space-y-3 max-w-sm">
-              <input
-                type="text"
-                placeholder="Your display name…"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && joinMeeting()}
-                className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all text-sm shadow-sm"
-              />
-              <button
-                onClick={joinMeeting}
-                disabled={!username.trim()}
-                className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none text-white font-bold rounded-2xl transition-all duration-200 text-sm shadow-lg shadow-orange-200 flex items-center justify-center gap-2"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
-                </svg>
-                Get Started Free
-              </button>
-            </div>
-
-            {/* Stats */}
-            <div className="flex gap-10 pt-2">
-              {[['4K', 'Crystal Video'], ['180+', 'Countries'], ['2M+', 'Daily Calls']].map(([val, label]) => (
-                <div key={label}>
-                  <p className="text-2xl font-black text-orange-500">{val}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{label}</p>
-                </div>
-              ))}
-            </div>
+            <span className="text-xl font-black text-gray-900 tracking-tight">Voya</span>
           </div>
 
-          {/* Right: video preview card */}
-          <div className="flex-1 flex justify-center items-center">
-            <div className="relative">
+          <div className="flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 px-4 py-2 rounded-2xl">
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-black text-sm shadow">
+                  {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div>
+                  <p className="text-gray-900 font-bold text-sm leading-tight">{user.name || 'User'}</p>
+                  <p className="text-gray-400 text-xs leading-tight">{user.email || ''}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 px-4 py-2 rounded-2xl">
+                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 font-black text-sm">
+                  ?
+                </div>
+                <div>
+                  <p className="text-gray-700 font-bold text-sm leading-tight">Guest</p>
+                  <p className="text-gray-400 text-xs leading-tight">Not signed in</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </nav>
 
-              {/* Main phone card */}
-              <div className="w-64 rounded-[2rem] overflow-hidden bg-gray-900 shadow-2xl border-4 border-white" style={{ aspectRatio: '9/16', maxHeight: '420px' }}>
-                <video ref={localVideoRef} autoPlay muted className="w-full h-full object-cover" />
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
-                  <p className="text-white text-sm font-bold">{username || 'You'}</p>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                    <span className="text-green-400 text-xs font-medium">Connected · HD</span>
+        {/* ── Main content ── */}
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="w-full max-w-5xl flex flex-col md:flex-row gap-12 items-center">
+
+            {/* Left: form */}
+            <div className="flex-1 space-y-7">
+              {/* Headline */}
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-px bg-orange-400"></div>
+                  <p className="text-xs font-bold tracking-widest text-orange-500 uppercase">The Future of Connection</p>
+                </div>
+                <h1 className="text-5xl font-black text-gray-900 leading-[1.1]">
+                  Feel{' '}
+                  <span className="text-orange-500 italic">together,</span>
+                  <br />
+                  <span className="font-extralight italic text-gray-600">wherever</span>
+                  <br />
+                  you are.
+                </h1>
+                <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-sm">
+                  Voya brings people closer with breathtaking video quality, zero-lag audio, and an experience so seamless it melts the miles between you.
+                </p>
+              </div>
+
+              {/* Input + button */}
+              <div className="space-y-3 max-w-sm">
+                <input
+                  type="text"
+                  placeholder="Your display name…"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && joinMeeting()}
+                  className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all text-sm shadow-sm"
+                />
+                <button
+                  onClick={joinMeeting}
+                  disabled={!username.trim()}
+                  className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none text-white font-bold rounded-2xl transition-all duration-200 text-sm shadow-lg shadow-orange-200 flex items-center justify-center gap-2"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
+                  </svg>
+                  Get Started Free
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="flex gap-10 pt-2">
+                {[['4K', 'Crystal Video'], ['180+', 'Countries'], ['2M+', 'Daily Calls']].map(([val, label]) => (
+                  <div key={label}>
+                    <p className="text-2xl font-black text-orange-500">{val}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{label}</p>
                   </div>
-                  {/* Mini controls inside card */}
-                  <div className="flex items-center gap-2 mt-3">
-                    <button className="w-8 h-8 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white border border-white/30">
-                      <IconMic />
-                    </button>
-                    <button className="w-8 h-8 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white border border-white/30">
-                      <IconCamera />
-                    </button>
-                    <button className="w-8 h-8 bg-red-500 rounded-xl flex items-center justify-center text-white shadow-md">
-                      <IconPhone />
-                    </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: video preview card */}
+            <div className="flex-1 flex justify-center items-center">
+              <div className="relative">
+
+                {/* Main video card */}
+                <div className="w-[600px] rounded-[2rem] overflow-hidden bg-gray-900 shadow-2xl border-4 border-white" style={{ aspectRatio: '9/16', maxHeight: '420px', position: 'relative' }}>
+                  <video ref={localVideoRef} autoPlay muted className="w-full h-full object-cover" />
+
+                  {/* Camera-off overlay */}
+                  {!cameraOn && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                      <div className="w-20 h-20 rounded-full bg-orange-500/20 border-2 border-orange-500/40 flex items-center justify-center">
+                        <span className="text-3xl font-black text-orange-400">
+                          {username.charAt(0).toUpperCase() || '?'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Bottom overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="text-white text-sm font-bold">{username || 'You'}</p>
+                    <div className="flex items-center gap-1.5 mt-1 mb-3">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse "></span>
+                      <span className="text-green-400 text-xs font-medium">Preview · HD</span>
+                    </div>
+
+                    {/* Functional mic/camera toggles */}
+                    <div className="flex items-center gap-2 pl-[250px]">
+                      <button
+                        onClick={() => setMicOn((v) => !v)}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-200 ${
+                          micOn
+                            ? 'bg-white/20 backdrop-blur text-white border-white/30 hover:bg-white/30'
+                            : 'bg-red-500 text-white border-red-400 hover:bg-red-600'
+                        }`}
+                        title={micOn ? 'Mute mic' : 'Unmute mic'}
+                      >
+                        {micOn ? <IconMic /> : <IconMicOff />}
+                      </button>
+                      <button
+                        onClick={() => setCameraOn((v) => !v)}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-200 ${
+                          cameraOn
+                            ? 'bg-white/20 backdrop-blur text-white border-white/30 hover:bg-white/30'
+                            : 'bg-red-500 text-white border-red-400 hover:bg-red-600'
+                        }`}
+                        title={cameraOn ? 'Turn off camera' : 'Turn on camera'}
+                      >
+                        {cameraOn ? <IconCamera /> : <IconCameraOff />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Floating badge: Encrypted */}
-              <div className="absolute -top-4 -right-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
-                <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-lg">🔒</div>
-                <div>
-                  <p className="text-xs font-bold text-gray-800 leading-tight">End-to-End Encrypted</p>
-                  <p className="text-xs text-gray-400">All calls secured</p>
+                {/* Floating badge: Encrypted */}
+                <div className="absolute -top-4 -right-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
+                  <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-lg">🔒</div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-800 leading-tight">End-to-End Encrypted</p>
+                    <p className="text-xs text-gray-400">All calls secured</p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Floating badge: Latency */}
-              <div className="absolute -bottom-4 -left-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
-                <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-lg">⚡</div>
-                <div>
-                  <p className="text-xs font-bold text-gray-800 leading-tight">Ultra-Low Latency</p>
-                  <p className="text-xs text-gray-400">&lt;60ms globally</p>
+                {/* Floating badge: Latency */}
+                <div className="absolute -bottom-4 -left-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
+                  <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-lg">⚡</div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-800 leading-tight">Ultra-Low Latency</p>
+                    <p className="text-xs text-gray-400">&lt;60ms globally</p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Floating badge: Group calls */}
-              <div className="absolute top-16 -right-10 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
-                <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center text-lg">👥</div>
-                <div>
-                  <p className="text-xs font-bold text-gray-800 leading-tight">Group Calls</p>
-                  <p className="text-xs text-gray-400">Up to 50 people</p>
+                {/* Floating badge: Group calls */}
+                <div className="absolute top-16 -right-10 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
+                  <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center text-lg">👥</div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-800 leading-tight">Group Calls</p>
+                    <p className="text-xs text-gray-400">Up to 50 people</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -524,8 +585,8 @@ export default function VideoMeet() {
   return (
     <div className="h-screen bg-gray-950 flex flex-col overflow-hidden font-sans">
 
-      {/* ── Top bar ── */}
-      <div className="flex items-center justify-between px-5 py-3 bg-gray-900/90 backdrop-blur border-b border-gray-800/60">
+      {/* ── Navbar ── */}
+      <nav className="flex items-center justify-between px-5 py-3 bg-gray-900/90 backdrop-blur border-b border-gray-800/60">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
             <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
@@ -542,10 +603,23 @@ export default function VideoMeet() {
           </span>
         </div>
 
-        <div className="text-gray-500 text-xs font-mono bg-gray-800/40 px-2.5 py-1 rounded-lg">
-          {username}
-        </div>
-      </div>
+        {/* User info */}
+        {user ? (
+          <div className="flex items-center gap-2 bg-gray-800/60 px-3 py-1.5 rounded-xl">
+            <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white font-black text-xs">
+              {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <span className="text-gray-300 text-xs font-medium">{user.name || user.email || 'User'}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-gray-800/40 px-3 py-1.5 rounded-xl">
+            <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-gray-400 font-black text-xs">
+              ?
+            </div>
+            <span className="text-gray-500 text-xs font-medium font-mono">{username}</span>
+          </div>
+        )}
+      </nav>
 
       {/* ── Main content ── */}
       <div className="flex flex-1 overflow-hidden">
