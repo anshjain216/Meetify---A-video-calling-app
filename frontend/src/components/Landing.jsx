@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -160,6 +160,7 @@ function FloatCard({ icon, iconBg, label, sub, posClass, floatClass }) {
 
 /* ── Main Component ── */
 export default function Landing() {
+  const navigate = useNavigate();
   const { user, userAvailable, setUserAvailable, setUser } = useContext(AuthContext);
   return (
     <div className="font-outfit min-h-screen overflow-x-hidden" style={{ background: "#fdf8f2", color: "#1a1108" }}>
@@ -238,7 +239,9 @@ export default function Landing() {
               </span>
             </div>
           </div>
-        <button className="flex items-center gap-1.5 text-[13.5px] font-medium text-[#555] px-4 py-2 rounded-full hover:bg-[#e8521a]/[0.07] hover:text-[#e8521a] transition-colors cursor-pointer border-none bg-transparent">
+        <button className="flex items-center gap-1.5 text-[13.5px] font-medium text-[#555] px-4 py-2 rounded-full hover:bg-[#e8521a]/[0.07] hover:text-[#e8521a] transition-colors cursor-pointer border-none bg-transparent" onClick={()=>{
+          navigate("/history");
+        }}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
                     </svg>
@@ -295,7 +298,8 @@ export default function Landing() {
           </p>
 
           {/* CTA Row */}
-          <div className="animate-rise-4 flex items-center gap-4" style={{ opacity: 0 }}>
+          {!userAvailable?
+          <><div className="animate-rise-4 flex items-center gap-4" style={{ opacity: 0 }}>
             <Link to="/login" className="btn-glow inline-flex items-center gap-2 font-outfit font-semibold rounded-2xl transition-all hover:-translate-y-1"
               style={{ background: "linear-gradient(135deg,#e8783a,#e85d3a)", color: "white", fontSize: 16, padding: "14px 28px", textDecoration: "none" }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -304,7 +308,21 @@ export default function Landing() {
               </svg>
               Get Started Free
             </Link>
+          </div></> :
+          <>
+          <div className="animate-rise-4 flex items-center gap-4" style={{ opacity: 0 }}>
+            <Link to="/home" className="btn-glow inline-flex items-center gap-2 font-outfit font-semibold rounded-2xl transition-all hover:-translate-y-1"
+              style={{ background: "linear-gradient(135deg,#e8783a,#e85d3a)", color: "white", fontSize: 16, padding: "14px 28px", textDecoration: "none" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 10l4.553-2.277A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14v-4z" />
+                <rect x="1" y="6" width="15" height="12" rx="2" />
+              </svg>
+              Join a call
+            </Link>
           </div>
+          </>
+        }
+          
 
           {/* Trust Stats */}
           <div className="animate-rise-5 flex items-center gap-8 mt-12 pt-8"
