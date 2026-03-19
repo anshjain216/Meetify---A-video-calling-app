@@ -3,6 +3,7 @@ import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import link from "../environment";
 
 
 export default function Home() {
@@ -19,7 +20,7 @@ export default function Home() {
         const tk = localStorage.getItem("token");
         if (tk) {
             try {
-                await axios.post("http://localhost:3000/add_to_activity", {
+                await axios.post(`${link}/add_to_activity`, {
                     meetingId
                 }, {
                     headers: {

@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
+import link from "../../environment";
 
 
 
@@ -11,6 +12,7 @@ export function Signup() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+   const [loading,setLoading] = useState(false);
 
   const { setUser, setUserAvailable } = useContext(AuthContext);
 
@@ -18,7 +20,7 @@ export function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
     if (!name || !username || !password) {
       setError("Please fill all fields");
       return;
@@ -26,7 +28,7 @@ export function Signup() {
 
     setError("");
 
-    const response = await axios.post("http://localhost:3000/register", {
+    const response = await axios.post(`${link}/register`, {
       name,
       username,
       password
@@ -39,6 +41,7 @@ export function Signup() {
   status: "Online"
 });
 setUserAvailable(true);
+setLoading(false);
     navigate("/home");
   };
 
@@ -88,7 +91,7 @@ setUserAvailable(true);
             type="submit"
             className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-semibold"
           >
-            Sign Up
+            {loading?"Loading...":"Signup"}
           </button>
         </form>
 

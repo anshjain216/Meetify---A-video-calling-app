@@ -2,8 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import axios from "axios";
 
 /* ── Google Font injected once ── */
+
+
 const FontLink = () => {
   useEffect(() => {
     const id = "voya-fonts";
@@ -160,6 +163,13 @@ function FloatCard({ icon, iconBg, label, sub, posClass, floatClass }) {
 
 /* ── Main Component ── */
 export default function Landing() {
+
+  // useEffect(()=>{
+  //   const serverWakeUp= async()=>{
+  //     await axios.get("https://voya-a-video-calling-app.onrender.com/");
+  //   }
+  //   serverWakeUp();
+  // },[]);
   const navigate = useNavigate();
   const { user, userAvailable, setUserAvailable, setUser } = useContext(AuthContext);
   return (

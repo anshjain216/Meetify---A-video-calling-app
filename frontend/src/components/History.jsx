@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
+import link from "../environment.js";
 
 export default function History() {
     const [history, setHistory] = useState([]);
@@ -13,7 +13,7 @@ export default function History() {
                 const tk = localStorage.getItem("token");
 
                 const res = await axios.get(
-                    "http://localhost:3000/get_all_activity",
+                    `${link}/get_all_activity`,
                     {
                         headers: {
                             Authorization: `Bearer ${tk}`

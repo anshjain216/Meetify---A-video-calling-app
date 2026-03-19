@@ -67,7 +67,6 @@ const fetchHistory= async(req,res)=>{
         const data = await meetingModel.find({
             user_id:req.user.id
         })
-        console.log(data);
         res.json({data});
     }
     catch(err){

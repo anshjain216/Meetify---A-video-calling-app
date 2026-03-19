@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import link from '../environment';
 
-const server = "http://localhost:3000";
+
+const server = link;
 
 // ─── WebRTC Config ────────────────────────────────────────────────────────────
 

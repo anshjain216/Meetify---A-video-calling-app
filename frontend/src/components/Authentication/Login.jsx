@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import link from "../../environment";
 
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading,setLoading] = useState(false);
 
   const { setUser, setUserAvailable } = useContext(AuthContext);
 
@@ -16,14 +18,14 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
     if (!username || !password) {
       setError("Please fill all fields");
       return;
     }
 
     setError("");
-    const response = await axios.post("http://localhost:3000/login", {
+    const response = await axios.post(`${link}/login`, {
       username,
       password
     });
@@ -36,6 +38,7 @@ setUser({
   status: "Online"
 });
 setUserAvailable(true);
+setLoading(false);
     navigate("/home");
   };
 
@@ -74,7 +77,7 @@ setUserAvailable(true);
             type="submit"
             className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-semibold"
           >
-            Login
+            {loading?"Loading...":"Login"}
           </button>
         </form>
 

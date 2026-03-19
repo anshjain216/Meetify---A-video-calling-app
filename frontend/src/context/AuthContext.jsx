@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Children } from "react";
 import { createContext } from "react";
 import axios from "axios";
+import link from "../environment";
 
 const AuthContext = createContext();
 
@@ -19,7 +20,7 @@ const AuthProvider = ({ children }) => {
         const fetchUser = async () => {
             const token = localStorage.getItem("token");
             if (token) {
-                const res = await axios.get("http://localhost:3000/user", {
+                const res = await axios.get(`${link}/user`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
