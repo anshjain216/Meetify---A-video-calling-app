@@ -44,6 +44,21 @@ export const connectToServer = (server)=>{
 
             io.to(roomId).emit("chat-message",data,sender,socket.id);
         })
+
+        // Fires *before* the socket leaves rooms — required so `user-left` reaches peers.
+        // On `disconnect`, `socket.rooms` is often empty, so notify here instead.
+        socket.on("disconnecting",()=>{
+            socket.rooms.forEach((roomId)=>{
+                if(roomId===socket.id) return;
+                socket.to(roomId).emit("user-left",socket.id);
+                const room = io.sockets.adapter.rooms.get(roomId);
+                if(!room || room.size===1){
+                    delete messages[roomId];
+                    console.log("Room deleted:", roomId);
+                }
+            });
+        });
+
         socket.on("disconnect",()=>{
             console.log("User disconnected:", socket.id);
             if(timeOnline[socket.id]){
@@ -53,17 +68,6 @@ export const connectToServer = (server)=>{
                 console.log(`User ${socket.id} stayed ${duration} seconds`);
                 delete timeOnline[socket.id];
             }
-            socket.rooms.forEach((roomId)=>{
-                if(roomId!=socket.id){
-                    socket.to(roomId).emit("user-left",socket.id);
-                    const room = io.sockets.adapter.rooms.get(roomId);
-
-                    if(!room || room.size ===1){
-                        delete messages[roomId];
-                        console.log("Room deleted:", roomId);
-                    }
-                }
-            })
         })
     })
     return io;

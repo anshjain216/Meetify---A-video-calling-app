@@ -10,7 +10,6 @@ const server = link;
 // ─── WebRTC Config ────────────────────────────────────────────────────────────
 
 const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-const peerConnections = {};
 
 // ─── Helpers: silent audio + black video tracks ───────────────────────────────
 
@@ -115,11 +114,18 @@ function ControlBtn({ onClick, active, danger = false, children, badge = 0 }) {
 
 export default function VideoMeet() {
   const { user, userAvailable, setUserAvailable, setUser } = useContext(AuthContext);
-  const socketRef        = useRef(null);
-  const mySocketIdRef    = useRef(null);
-  const localVideoRef    = useRef(null);
-  const remoteVideoRefs  = useRef([]);
-  const messagesEndRef   = useRef(null);
+  const socketRef               = useRef(null);
+  const mySocketIdRef           = useRef(null);
+  const localVideoRef           = useRef(null);
+  const messagesEndRef          = useRef(null);
+  const peerConnectionsRef      = useRef({});
+  const screenShareWasActiveRef = useRef(false);
+  const mediaStateRef           = useRef({
+    cameraOn: false,
+    micOn: false,
+    hasCameraPermission: false,
+    hasMicPermission: false,
+  });
 
   const [inLobby, setInLobby]                             = useState(true);
   const [username, setUsername]                           = useState(user.name);
@@ -138,6 +144,8 @@ export default function VideoMeet() {
   const [messages, setMessages]         = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
   const [unreadCount, setUnreadCount]   = useState(0);
+
+  mediaStateRef.current = { cameraOn, micOn, hasCameraPermission, hasMicPermission };
 
   // ─── 1. Detect media permissions on mount ──────────────────────────────────
 
@@ -163,6 +171,7 @@ export default function VideoMeet() {
   // ─── 2. Re-broadcast when camera/mic toggles change ────────────────────────
 
   useEffect(() => {
+    if (screenShareOn) return;
     async function updateLocalStream() {
       const shouldStream = (cameraOn && hasCameraPermission) || (micOn && hasMicPermission);
       if (shouldStream) {
@@ -175,15 +184,29 @@ export default function VideoMeet() {
         } catch (e) { console.error('getUserMedia failed:', e); }
       } else {
         stopLocalTracks();
+        if (!inLobby) {
+          const fallback = createBlackSilenceStream();
+          window.localStream = fallback;
+          if (localVideoRef.current) localVideoRef.current.srcObject = fallback;
+          broadcastStreamToPeers(fallback);
+        }
       }
     }
     updateLocalStream();
-  }, [cameraOn, micOn]);
+  }, [cameraOn, micOn, hasCameraPermission, hasMicPermission, screenShareOn, inLobby]);
 
   // ─── 3. Handle screen share toggle ─────────────────────────────────────────
 
   useEffect(() => {
-    if (screenShareOn) startScreenShare();
+    if (screenShareOn) {
+      startScreenShare();
+      screenShareWasActiveRef.current = true;
+      return;
+    }
+    if (screenShareWasActiveRef.current) {
+      screenShareWasActiveRef.current = false;
+      stopScreenShareAndRestore();
+    }
   }, [screenShareOn]);
 
   // Auto-scroll chat to bottom on new message
@@ -192,6 +215,30 @@ export default function VideoMeet() {
   }, [messages]);
 
   // ─── Local stream helpers ───────────────────────────────────────────────────
+
+  /** Send local media to a peer: replace existing sender tracks so renegotiation updates remote video. */
+  function syncOutboundStreamToPeer(pc, stream) {
+    const tracks = stream.getTracks();
+    for (const track of tracks) {
+      const sender = pc.getSenders().find((s) => s.track?.kind === track.kind);
+      if (sender) {
+        sender.replaceTrack(track);
+      } else {
+        pc.addTrack(track, stream);
+      }
+    }
+  }
+
+  function removePeerConnection(peerId) {
+    const pc = peerConnectionsRef.current[peerId];
+    if (!pc) return;
+    try {
+      pc.onicecandidate = null;
+      pc.ontrack = null;
+      pc.close();
+    } catch (_) {}
+    delete peerConnectionsRef.current[peerId];
+  }
 
   function applyLocalStream(stream) {
     stopLocalTracks();
@@ -217,20 +264,41 @@ export default function VideoMeet() {
   }
 
   function broadcastStreamToPeers(stream) {
-    for (const peerId in peerConnections) {
+    if (!socketRef.current) return;
+    const peers = peerConnectionsRef.current;
+    for (const peerId of Object.keys(peers)) {
       if (peerId === mySocketIdRef.current) continue;
-      peerConnections[peerId].addStream(stream);
-      peerConnections[peerId]
+      const pc = peers[peerId];
+      try {
+        syncOutboundStreamToPeer(pc, stream);
+      } catch (e) {
+        console.warn('syncOutboundStreamToPeer:', e);
+      }
+      pc
         .createOffer()
-        .then((desc) => peerConnections[peerId].setLocalDescription(desc))
+        .then((desc) => pc.setLocalDescription(desc))
         .then(() => {
-          socketRef.current.emit('signal', peerId, JSON.stringify({ sdp: peerConnections[peerId].localDescription }));
+          socketRef.current.emit('signal', peerId, JSON.stringify({ sdp: pc.localDescription }));
         })
         .catch(console.error);
     }
   }
 
   // ─── Screen share ───────────────────────────────────────────────────────────
+
+  function stopScreenShareAndRestore() {
+    const { cameraOn: c, micOn: m, hasCameraPermission: hc, hasMicPermission: hm } = mediaStateRef.current;
+    stopLocalTracks();
+    const shouldStream = (c && hc) || (m && hm);
+    if (shouldStream) {
+      navigator.mediaDevices
+        .getUserMedia({ video: c && hc, audio: m && hm })
+        .then(applyLocalStream)
+        .catch(console.error);
+    } else {
+      applyLocalStream(createBlackSilenceStream());
+    }
+  }
 
   async function startScreenShare() {
     try {
@@ -239,9 +307,14 @@ export default function VideoMeet() {
       stream.getTracks().forEach((track) => {
         track.onended = () => {
           setScreenShareOn(false);
-          if (cameraOn || micOn) {
-            navigator.mediaDevices.getUserMedia({ video: cameraOn, audio: micOn })
-              .then(applyLocalStream).catch(console.error);
+          const { cameraOn: c, micOn: m, hasCameraPermission: hc, hasMicPermission: hm } = mediaStateRef.current;
+          if ((c && hc) || (m && hm)) {
+            navigator.mediaDevices
+              .getUserMedia({ video: c && hc, audio: m && hm })
+              .then(applyLocalStream)
+              .catch(console.error);
+          } else {
+            applyLocalStream(createBlackSilenceStream());
           }
         };
       });
@@ -254,72 +327,94 @@ export default function VideoMeet() {
   // ─── Socket + WebRTC ────────────────────────────────────────────────────────
 
   function connectToServer() {
-    socketRef.current = io.connect(server, { secure: false });
+    const s = io(server, { secure: false });
+    socketRef.current = s;
 
-    socketRef.current.on('connect', () => {
-      mySocketIdRef.current = socketRef.current.id;
-      socketRef.current.emit('join-call', window.location.href);
-      socketRef.current.on('chat-message', handleIncomingMessage);
-      socketRef.current.on('user-left', handleUserLeft);
-      socketRef.current.on('connected-users', handleConnectedUsers);
-      socketRef.current.on('user-joined', handleUserJoined);
+    s.on('connect', () => {
+      mySocketIdRef.current = s.id;
+      s.emit('join-call', window.location.href);
     });
 
-    socketRef.current.on('signal', handleSignal);
+    s.on('chat-message', handleIncomingMessage);
+    s.on('user-left', handleUserLeft);
+    s.on('connected-users', handleConnectedUsers);
+    s.on('user-joined', handleUserJoined);
+    s.on('signal', handleSignal);
   }
 
   function handleUserLeft(socketId) {
+    removePeerConnection(socketId);
     setRemoteStreams((prev) => prev.filter((v) => v.socketId !== socketId));
   }
 
   function handleConnectedUsers(existingClients) {
     existingClients.forEach((clientId) => {
       if (clientId === mySocketIdRef.current) return;
-      if (peerConnections[clientId]) return;
+      if (peerConnectionsRef.current[clientId]) return;
       createPeerConnection(clientId);
     });
 
-    for (const peerId in peerConnections) {
-      try { peerConnections[peerId].addStream(window.localStream); } catch (_) {}
-      peerConnections[peerId]
+    const peers = peerConnectionsRef.current;
+    for (const peerId of Object.keys(peers)) {
+      const pc = peers[peerId];
+      try {
+        syncOutboundStreamToPeer(pc, window.localStream);
+      } catch (_) {}
+      pc
         .createOffer()
-        .then((desc) => peerConnections[peerId].setLocalDescription(desc))
+        .then((desc) => pc.setLocalDescription(desc))
         .then(() => {
-          socketRef.current.emit('signal', peerId, JSON.stringify({ sdp: peerConnections[peerId].localDescription }));
+          socketRef.current.emit('signal', peerId, JSON.stringify({ sdp: pc.localDescription }));
         })
         .catch(console.error);
     }
   }
 
   function handleUserJoined(newUserId) {
-    if (peerConnections[newUserId]) return;
+    if (peerConnectionsRef.current[newUserId]) return;
     createPeerConnection(newUserId);
   }
 
   function createPeerConnection(peerId) {
     const pc = new RTCPeerConnection(ICE_SERVERS);
-    peerConnections[peerId] = pc;
+    peerConnectionsRef.current[peerId] = pc;
 
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
+      if (event.candidate && socketRef.current) {
         socketRef.current.emit('signal', peerId, JSON.stringify({ ice: event.candidate }));
       }
     };
 
-    pc.onaddstream = (event) => {
+    pc.ontrack = (event) => {
       setRemoteStreams((prev) => {
-        const exists = prev.find((v) => v.socketId === peerId);
-        const updated = exists
-          ? prev.map((v) => (v.socketId === peerId ? { ...v, stream: event.stream } : v))
-          : [...prev, { socketId: peerId, stream: event.stream }];
-        remoteVideoRefs.current = updated;
-        return updated;
+        const cur = prev.find((v) => v.socketId === peerId);
+        let stream;
+        if (cur?.stream) {
+          stream = cur.stream;
+          stream.getTracks().filter((t) => t.kind === event.track.kind).forEach((t) => {
+            stream.removeTrack(t);
+            t.stop();
+          });
+          stream.addTrack(event.track);
+        } else {
+          stream = event.streams[0] || new MediaStream([event.track]);
+        }
+        if (cur) {
+          return prev.map((v) => (v.socketId === peerId ? { ...v, stream } : v));
+        }
+        return [...prev, { socketId: peerId, stream }];
       });
     };
 
     const streamToSend = window.localStream ?? createBlackSilenceStream();
     window.localStream = streamToSend;
-    pc.addStream(streamToSend);
+    streamToSend.getTracks().forEach((track) => {
+      try {
+        pc.addTrack(track, streamToSend);
+      } catch (e) {
+        console.warn('addTrack:', e);
+      }
+    });
     return pc;
   }
 
@@ -327,15 +422,23 @@ export default function VideoMeet() {
     const signal = JSON.parse(rawMessage);
     if (fromId === mySocketIdRef.current) return;
 
+    if (!peerConnectionsRef.current[fromId]) {
+      createPeerConnection(fromId);
+    }
+
+    const pc = peerConnectionsRef.current[fromId];
+    if (!pc) return;
+
     if (signal.sdp) {
-      peerConnections[fromId]
+      pc
         .setRemoteDescription(new RTCSessionDescription(signal.sdp))
         .then(() => {
           if (signal.sdp.type === 'offer') {
-            return peerConnections[fromId].createAnswer()
-              .then((desc) => peerConnections[fromId].setLocalDescription(desc))
+            return pc
+              .createAnswer()
+              .then((desc) => pc.setLocalDescription(desc))
               .then(() => {
-                socketRef.current.emit('signal', fromId, JSON.stringify({ sdp: peerConnections[fromId].localDescription }));
+                socketRef.current.emit('signal', fromId, JSON.stringify({ sdp: pc.localDescription }));
               });
           }
         })
@@ -343,7 +446,7 @@ export default function VideoMeet() {
     }
 
     if (signal.ice) {
-      peerConnections[fromId].addIceCandidate(new RTCIceCandidate(signal.ice)).catch(console.error);
+      pc.addIceCandidate(new RTCIceCandidate(signal.ice)).catch(console.error);
     }
   }
 
@@ -372,17 +475,16 @@ export default function VideoMeet() {
   function joinMeeting() {
     if (!username.trim()) return;
     setInLobby(false);
-    setCameraOn(hasCameraPermission);
-    setMicOn(hasMicPermission);
     connectToServer();
   }
 
   function endCall() {
+    Object.keys(peerConnectionsRef.current).forEach(removePeerConnection);
     stopLocalTracks();
+    socketRef.current?.disconnect();
+    socketRef.current = null;
     window.location.href = '/';
   }
-
-  // ─── Render: Lobby ──────────────────────────────────────────────────────────
 
   // ─── Render: Lobby ──────────────────────────────────────────────────────────
 
