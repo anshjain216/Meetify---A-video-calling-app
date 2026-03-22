@@ -7,8 +7,8 @@ import dotenv from "dotenv";
 
 import mainRouter from "./routes/mainRouter.js";
 import {connectToServer} from "./controllers/socketManager.js";
-import { setServers } from "node:dns/promises";
-setServers(["1.1.1.1", "8.8.8.8"]);
+// import { setServers } from "node:dns/promises";
+// setServers(["1.1.1.1", "8.8.8.8"]);
 dotenv.config();
 
 const port = process.env.PORT || 3000;
