@@ -30,7 +30,7 @@ export default function History() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#f7f3ef] px-6 py-12">
+    <div className="min-h-screen bg-[#f7f3ef] px-4 sm:px-6 py-8 sm:py-12">
 
             {/* Header */}
             <div className="max-w-4xl mx-auto mb-12 text-center">
@@ -87,10 +87,13 @@ export default function History() {
                     </tbody>
                 </table>
             </div>
-            <button className="text-[white] border px-4 py-2 bg-[#f97316] rounded-full mt-8 ml-[780px]" onClick={()=>{
-                navigate("/home");
-            }}>
-            Home
+            <button
+                className="text-white px-6 py-2.5 bg-[#f97316] rounded-full mt-6 sm:mt-8 font-medium hover:bg-[#e8521a] transition-colors w-full sm:w-auto block mx-auto"
+                onClick={() => {
+                    navigate("/home");
+                }}
+            >
+                Home
             </button>
         </div>
     );

@@ -51,7 +51,7 @@ export default function Home() {
             {/* ──────────────────────────────────────
           NAVBAR
       ────────────────────────────────────── */}
-            <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 h-[68px] bg-[#fdf6f0]/80 backdrop-blur-md border-b border-black/[0.06]">
+            <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-8 md:px-12 h-[60px] sm:h-[68px] bg-[#fdf6f0]/80 backdrop-blur-md border-b border-black/[0.06]">
 
                 {/* Logo */}
                 <a href="#" className="flex items-center gap-2.5 no-underline">
@@ -86,7 +86,7 @@ export default function Home() {
                     {/* History & Logout — only when logged in */}
                     {userAvailable && (
                         <>
-                            <button className="flex items-center gap-1.5 text-[13.5px] font-medium text-[#555] px-4 py-2 rounded-full hover:bg-[#e8521a]/[0.07] hover:text-[#e8521a] transition-colors cursor-pointer border-none bg-transparent" onClick={()=>{
+                            <button className="hidden sm:flex items-center gap-1.5 text-[13.5px] font-medium text-[#555] px-4 py-2 rounded-full hover:bg-[#e8521a]/[0.07] hover:text-[#e8521a] transition-colors cursor-pointer border-none bg-transparent" onClick={()=>{
           navigate("/history");
         }}>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -102,7 +102,7 @@ export default function Home() {
                                     setUser({ name: "Guest", avatar: "G", status: "Online" });
                                     navigate("/");
                                 }}
-                                className="flex items-center gap-1.5 text-[13.5px] font-medium text-[#e8521a] px-4 py-2 rounded-full border border-[#e8521a]/30 hover:bg-[#e8521a] hover:text-white transition-all cursor-pointer bg-transparent"
+                                className="hidden sm:flex items-center gap-1.5 text-[13.5px] font-medium text-[#e8521a] px-4 py-2 rounded-full border border-[#e8521a]/30 hover:bg-[#e8521a] hover:text-white transition-all cursor-pointer bg-transparent"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M18 12H9m0 0 3-3m-3 3 3 3" />
@@ -118,11 +118,11 @@ export default function Home() {
             {/* ──────────────────────────────────────
           HERO
       ────────────────────────────────────── */}
-            <main className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-16 overflow-hidden">
+            <main className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 sm:pt-24 pb-12 sm:pb-16 overflow-hidden">
 
                 {/* Decorative blobs */}
-                <div className="absolute top-[-100px] right-[-80px] w-[480px] h-[480px] rounded-full bg-[radial-gradient(circle,_#f4a87a,_transparent_70%)] blur-[80px] opacity-35 pointer-events-none" />
-                <div className="absolute bottom-10 left-[-100px] w-[360px] h-[360px] rounded-full bg-[radial-gradient(circle,_#e8521a,_transparent_70%)] blur-[80px] opacity-10 pointer-events-none" />
+                <div className="hidden md:block absolute top-[-100px] right-[-80px] w-[480px] h-[480px] rounded-full bg-[radial-gradient(circle,_#f4a87a,_transparent_70%)] blur-[80px] opacity-35 pointer-events-none" />
+                <div className="hidden md:block absolute bottom-10 left-[-100px] w-[360px] h-[360px] rounded-full bg-[radial-gradient(circle,_#e8521a,_transparent_70%)] blur-[80px] opacity-10 pointer-events-none" />
 
                 <div className="relative z-10 text-center max-w-xl w-full">
 
@@ -149,7 +149,7 @@ export default function Home() {
                     </p>
 
                     {/* ── JOIN CARD ── */}
-                    <div className="bg-white border border-black/[0.07] rounded-3xl px-9 py-10 shadow-[0_4px_6px_rgba(0,0,0,0.04),0_20px_50px_rgba(232,82,26,0.08)] w-full max-w-[440px] mx-auto">
+                    <div className="bg-white border border-black/[0.07] rounded-3xl px-4 sm:px-9 py-7 sm:py-10 shadow-[0_4px_6px_rgba(0,0,0,0.04),0_20px_50px_rgba(232,82,26,0.08)] w-full max-w-[440px] mx-auto">
 
                         <p className="text-left text-[11px] font-medium tracking-[1.8px] uppercase text-[#aaa] mb-2.5">
                             Enter Meeting ID
@@ -161,13 +161,13 @@ export default function Home() {
                             value={meetingId}
                             onChange={(e) => setMeetingId(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                            className="w-full px-5 py-4 mb-4 text-[15px] text-[#1a1a1a] bg-[#fdf6f0] border-[1.5px] border-transparent rounded-[14px] outline-none placeholder-[#c8b8af] transition-all focus:border-[#e8521a] focus:shadow-[0_0_0_4px_rgba(232,82,26,0.1)] focus:bg-white"
+                            className="w-full px-4 py-3 sm:px-5 sm:py-4 mb-4 text-[15px] text-[#1a1a1a] bg-[#fdf6f0] border-[1.5px] border-transparent rounded-[14px] outline-none placeholder-[#c8b8af] transition-all focus:border-[#e8521a] focus:shadow-[0_0_0_4px_rgba(232,82,26,0.1)] focus:bg-white"
                         />
 
                         <button
                             onClick={handleConnect}
                             disabled={connecting || !meetingId.trim()}
-                            className="w-full py-[17px] px-6 bg-[#e8521a] text-white text-[15px] font-medium rounded-[14px] border-none flex items-center justify-center gap-2.5 transition-all hover:bg-[#d44815] hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(232,82,26,0.3)] active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                            className="w-full py-3.5 sm:py-[17px] px-5 sm:px-6 bg-[#e8521a] text-white text-[15px] font-medium rounded-[14px] border-none flex items-center justify-center gap-2.5 transition-all hover:bg-[#d44815] hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(232,82,26,0.3)] active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                         >
                             {connecting ? (
                                 <>

@@ -91,7 +91,7 @@ const IconSend = () => (
 // ─── Reusable Control Button ──────────────────────────────────────────────────
 
 function ControlBtn({ onClick, active, danger = false, children, badge = 0 }) {
-  const base = 'relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200 focus:outline-none';
+  const base = 'relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl transition-all duration-200 focus:outline-none';
   const style = danger
     ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-900/40'
     : active
@@ -372,7 +372,17 @@ export default function VideoMeet() {
 
   function handleUserJoined(newUserId) {
     if (peerConnectionsRef.current[newUserId]) return;
-    createPeerConnection(newUserId);
+    const pc = createPeerConnection(newUserId);
+    try {
+      syncOutboundStreamToPeer(pc, window.localStream);
+    } catch (_) {}
+    pc
+      .createOffer()
+      .then((desc) => pc.setLocalDescription(desc))
+      .then(() => {
+        socketRef.current.emit('signal', newUserId, JSON.stringify({ sdp: pc.localDescription }));
+      })
+      .catch(console.error);
   }
 
   function createPeerConnection(peerId) {
@@ -430,10 +440,34 @@ export default function VideoMeet() {
     if (!pc) return;
 
     if (signal.sdp) {
+      // Handle offer collision (glare): if we receive an offer while we already
+      // have a pending local offer, the "polite" peer (lower socket ID) rolls back
+      // its own offer and accepts the incoming one.
+      const isOffer = signal.sdp.type === 'offer';
+      const offerCollision = isOffer && (pc.signalingState === 'have-local-offer' || pc.signalingState === 'have-remote-offer');
+
+      if (offerCollision) {
+        const polite = mySocketIdRef.current < fromId;
+        if (!polite) {
+          // We are the impolite peer — ignore the incoming offer, keep ours
+          return;
+        }
+        // We are the polite peer — rollback our offer and accept theirs
+        pc.setLocalDescription({ type: 'rollback' })
+          .then(() => pc.setRemoteDescription(new RTCSessionDescription(signal.sdp)))
+          .then(() => pc.createAnswer())
+          .then((desc) => pc.setLocalDescription(desc))
+          .then(() => {
+            socketRef.current.emit('signal', fromId, JSON.stringify({ sdp: pc.localDescription }));
+          })
+          .catch(console.error);
+        return;
+      }
+
       pc
         .setRemoteDescription(new RTCSessionDescription(signal.sdp))
         .then(() => {
-          if (signal.sdp.type === 'offer') {
+          if (isOffer) {
             return pc
               .createAnswer()
               .then((desc) => pc.setLocalDescription(desc))
@@ -474,6 +508,10 @@ export default function VideoMeet() {
 
   function joinMeeting() {
     if (!username.trim()) return;
+    // Ensure a valid local stream exists before establishing socket connection
+    if (!window.localStream || window.localStream.getTracks().every(t => t.readyState === 'ended')) {
+      window.localStream = createBlackSilenceStream();
+    }
     setInLobby(false);
     connectToServer();
   }
@@ -590,8 +628,8 @@ export default function VideoMeet() {
               <div className="relative">
 
                 {/* Main video card */}
-                <div className="w-[600px] rounded-[2rem] overflow-hidden bg-gray-900 shadow-2xl border-4 border-white" style={{ aspectRatio: '9/16', maxHeight: '420px', position: 'relative' }}>
-                  <video ref={localVideoRef} autoPlay muted className="w-full h-full object-cover" />
+                <div className="w-full max-w-[600px] rounded-[2rem] overflow-hidden bg-gray-900 shadow-2xl border-4 border-white" style={{ aspectRatio: '9/16', maxHeight: '420px', position: 'relative' }}>
+                  <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
 
                   {/* Camera-off overlay */}
                   {!cameraOn && (
@@ -616,7 +654,7 @@ export default function VideoMeet() {
                     </div>
 
                     {/* Functional mic/camera toggles */}
-                    <div className="flex items-center gap-2 pl-[250px]">
+                    <div className="flex items-center gap-2 ml-auto">
                       <button
                         onClick={() => setMicOn((v) => !v)}
                         className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-200 ${
@@ -644,7 +682,7 @@ export default function VideoMeet() {
                 </div>
 
                 {/* Floating badge: Encrypted */}
-                <div className="absolute -top-4 -right-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
+                <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
                   <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-lg">🔒</div>
                   <div>
                     <p className="text-xs font-bold text-gray-800 leading-tight">End-to-End Encrypted</p>
@@ -653,7 +691,7 @@ export default function VideoMeet() {
                 </div>
 
                 {/* Floating badge: Latency */}
-                <div className="absolute -bottom-4 -left-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
+                <div className="absolute -bottom-2 -left-2 sm:-bottom-4 sm:-left-6 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
                   <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-lg">⚡</div>
                   <div>
                     <p className="text-xs font-bold text-gray-800 leading-tight">Ultra-Low Latency</p>
@@ -662,7 +700,7 @@ export default function VideoMeet() {
                 </div>
 
                 {/* Floating badge: Group calls */}
-                <div className="absolute top-16 -right-10 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
+                <div className="absolute top-12 -right-3 sm:top-16 sm:-right-10 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2.5 border border-gray-100">
                   <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center text-lg">👥</div>
                   <div>
                     <p className="text-xs font-bold text-gray-800 leading-tight">Group Calls</p>
@@ -681,10 +719,13 @@ export default function VideoMeet() {
 
   const totalParticipants = remoteStreams.length + 1;
   const gridClass =
-    totalParticipants === 1 ? 'grid-cols-1' :
-    totalParticipants === 2 ? 'grid-cols-2' :
-    totalParticipants <= 4 ? 'grid-cols-2' :
-    'grid-cols-3';
+    totalParticipants === 1
+      ? 'grid-cols-1'
+      : totalParticipants === 2
+        ? 'grid-cols-1 sm:grid-cols-2'
+        : totalParticipants <= 4
+          ? 'grid-cols-1 sm:grid-cols-2'
+          : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3';
 
   return (
     <div className="h-screen bg-gray-950 flex flex-col overflow-hidden font-sans">
@@ -729,12 +770,12 @@ export default function VideoMeet() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Video grid */}
-        <div className="flex-1 p-3 overflow-auto">
+        <div className="flex-1 min-w-0 p-2 sm:p-3 overflow-auto">
           <div className={`h-full grid gap-3 ${gridClass}`}>
 
             {/* Local tile */}
             <div className="relative rounded-2xl overflow-hidden bg-gray-800 border border-gray-700/50 group min-h-0">
-              <video ref={localVideoRef} autoPlay muted className="w-full h-full object-cover" />
+              <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
 
               {/* Camera-off avatar */}
               {!cameraOn && (
@@ -767,6 +808,7 @@ export default function VideoMeet() {
                   data-socket={remote.socketId}
                   ref={(el) => { if (el && remote.stream) el.srcObject = remote.stream; }}
                   autoPlay
+                  playsInline
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute bottom-3 left-3">
@@ -781,7 +823,7 @@ export default function VideoMeet() {
 
         {/* ── Chat panel ── */}
         {chatOpen && (
-          <div className="w-72 bg-gray-900 border-l border-gray-800/60 flex flex-col">
+          <div className="w-full sm:w-72 bg-gray-900 border-t border-gray-800/60 sm:border-t-0 sm:border-l fixed inset-0 z-50 sm:static flex flex-col">
             <div className="px-4 py-3.5 border-b border-gray-800/60 flex items-center justify-between">
               <h2 className="text-white font-bold text-sm">Chat</h2>
               <button
@@ -844,7 +886,7 @@ export default function VideoMeet() {
       </div>
 
       {/* ── Control bar ── */}
-      <div className="flex items-center justify-center gap-3 py-4 px-6 bg-gray-900/95 backdrop-blur border-t border-gray-800/60">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4 px-3 sm:px-6 bg-gray-900/95 backdrop-blur border-t border-gray-800/60">
         <ControlBtn onClick={() => setCameraOn((v) => !v)} active={cameraOn}>
           {cameraOn ? <IconCamera /> : <IconCameraOff />}
         </ControlBtn>
@@ -867,7 +909,7 @@ export default function VideoMeet() {
           <IconChat />
         </ControlBtn>
 
-        <div className="w-px h-8 bg-gray-700 mx-1" />
+        <div className="w-px h-8 bg-gray-700 mx-1 hidden sm:block" />
 
         <ControlBtn onClick={endCall} danger>
           <IconPhone />

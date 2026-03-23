@@ -185,7 +185,7 @@ export default function Landing() {
       </div>
 
       {/* ── NAV ── */}
-      <nav className="relative z-50 flex items-center justify-between px-20 py-6 nav-shadow" style={{ background: "rgba(253,248,242,.85)", backdropFilter: "blur(12px)" }}>
+      <nav className="relative z-50 flex items-center justify-between px-4 sm:px-12 md:px-20 py-4 sm:py-6 nav-shadow" style={{ background: "rgba(253,248,242,.85)", backdropFilter: "blur(12px)" }}>
         <div className="font-playfair font-black flex items-center gap-2" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>
           <span className="flex items-center justify-center rounded-xl text-white font-outfit font-bold"
             style={{ width: 30, height: 30, fontSize: 14, background: "linear-gradient(135deg,#e8783a,#e85d3a)", boxShadow: "0 4px 14px rgba(232,120,58,.4)" }}>
@@ -277,8 +277,8 @@ export default function Landing() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative z-10 grid items-center px-20 pb-16"
-        style={{ gridTemplateColumns: "1fr 1fr", minHeight: "calc(100vh - 80px)", gap: "2rem" }}>
+      <section className="relative z-10 grid grid-cols-1 md:grid-cols-2 items-center px-4 sm:px-6 md:px-20 pb-16 gap-8 md:gap-12"
+        style={{ minHeight: "calc(100vh - 80px)" }}>
 
         {/* LEFT */}
         <div style={{ maxWidth: 560 }}>
@@ -401,13 +401,13 @@ export default function Landing() {
       </section>
 
       {/* ── FEATURES BAND ── */}
-      <div className="relative z-10 grid" style={{ background: "#1a1108", gridTemplateColumns: "repeat(3,1fr)" }}>
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3" style={{ background: "#1a1108" }}>
         {[
           { num: "4K", title: "Cinema-Grade Video", desc: "Adaptive streaming delivers the best resolution your connection can handle — always." },
           { num: "256-bit", title: "Military Encryption", desc: "Every call is wrapped end-to-end. Zero logs. Your conversations belong only to you." },
           { num: "50+", title: "Group Calling", desc: "Bring everyone together — family, friends, or your whole team — with crystal-clear audio." },
         ].map((f, i) => (
-          <div key={i} className="group transition-colors hover:bg-white/[.03] px-10 py-14"
+          <div key={i} className="group transition-colors hover:bg-white/[.03] px-6 sm:px-10 py-10 sm:py-14"
             style={{ borderRight: i < 2 ? "1px solid rgba(255,255,255,.07)" : "none" }}>
             <p className="font-playfair font-bold feat-grad mb-3" style={{ fontSize: 42 }}>{f.num}</p>
             <p className="font-outfit font-semibold text-white mb-2" style={{ fontSize: 16 }}>{f.title}</p>

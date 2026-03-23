@@ -46,9 +46,9 @@ setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fbf4ee] px-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-[#2b1f18] mb-2">Create Account</h2>
+    <div className="min-h-screen flex items-center justify-center bg-[#fbf4ee] px-4 sm:px-6 py-8 overflow-y-auto">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#2b1f18] mb-2">Create Account</h2>
         <p className="text-gray-500 mb-6">Start connecting with people</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
