@@ -393,13 +393,23 @@ export default function VideoMeet() {
     };
 
     pc.ontrack = (event) => {
-      const stream = event.streams[0];
-      if (!stream) return;
       setRemoteStreams((prev) => {
-        if (prev.find((v) => v.socketId === peerId && v.stream === stream)) {
-          return prev; // Already tracking this exact stream
+        let stream;
+        const existing = prev.find((v) => v.socketId === peerId);
+        
+        if (existing?.stream) {
+          stream = existing.stream;
+          if (!stream.getTrackById(event.track.id)) {
+            stream.addTrack(event.track);
+          }
+        } else {
+          stream = event.streams[0] || new MediaStream([event.track]);
         }
-        return [...prev.filter((v) => v.socketId !== peerId), { socketId: peerId, stream }];
+        
+        if (existing) {
+          return prev.map((v) => (v.socketId === peerId ? { ...v, stream } : v));
+        }
+        return [...prev, { socketId: peerId, stream }];
       });
     };
 
@@ -440,6 +450,17 @@ export default function VideoMeet() {
         // We are the polite peer — rollback our offer and accept theirs
         pc.setLocalDescription({ type: 'rollback' })
           .then(() => pc.setRemoteDescription(new RTCSessionDescription(signal.sdp)))
+          .then(() => {
+            pc.isRemoteDescriptionSet = true;
+            if (pc.iceQueue) {
+              pc.iceQueue.forEach(ice => {
+                try {
+                  pc.addIceCandidate(new RTCIceCandidate(ice)).catch(console.error);
+                } catch (e) { console.error('AddIceSyncError:', e); }
+              });
+              pc.iceQueue = [];
+            }
+          })
           .then(() => pc.createAnswer())
           .then((desc) => pc.setLocalDescription(desc))
           .then(() => {
@@ -452,6 +473,17 @@ export default function VideoMeet() {
       pc
         .setRemoteDescription(new RTCSessionDescription(signal.sdp))
         .then(() => {
+          pc.isRemoteDescriptionSet = true;
+          // Process queued ICE candidates
+          if (pc.iceQueue) {
+            pc.iceQueue.forEach(ice => {
+              try {
+                pc.addIceCandidate(new RTCIceCandidate(ice)).catch(console.error);
+              } catch (e) { console.error('AddIceSyncError:', e); }
+            });
+            pc.iceQueue = [];
+          }
+          
           if (isOffer) {
             return pc
               .createAnswer()
@@ -465,7 +497,15 @@ export default function VideoMeet() {
     }
 
     if (signal.ice) {
-      pc.addIceCandidate(new RTCIceCandidate(signal.ice)).catch(console.error);
+      if (pc.isRemoteDescriptionSet) {
+        try {
+          pc.addIceCandidate(new RTCIceCandidate(signal.ice)).catch(console.error);
+        } catch (e) { console.error('AddIceSyncError:', e); }
+      } else {
+        // Queue ICE candidates if remote description is not set yet
+        pc.iceQueue = pc.iceQueue || [];
+        pc.iceQueue.push(signal.ice);
+      }
     }
   }
 
