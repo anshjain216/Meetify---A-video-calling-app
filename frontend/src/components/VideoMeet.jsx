@@ -11,26 +11,8 @@ const server = link;
 
 const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-// ─── Helpers: silent audio + black video tracks ───────────────────────────────
-
-function createSilentAudioTrack() {
-  const ctx = new AudioContext();
-  const oscillator = ctx.createOscillator();
-  const dest = oscillator.connect(ctx.createMediaStreamDestination());
-  oscillator.start();
-  ctx.resume();
-  return Object.assign(dest.stream.getAudioTracks()[0], { enabled: false });
-}
-
-function createBlackVideoTrack({ width = 640, height = 480 } = {}) {
-  const canvas = Object.assign(document.createElement('canvas'), { width, height });
-  canvas.getContext('2d').fillRect(0, 0, width, height);
-  return Object.assign(canvas.captureStream().getVideoTracks()[0], { enabled: false });
-}
-
-function createBlackSilenceStream() {
-  return new MediaStream([createBlackVideoTrack(), createSilentAudioTrack()]);
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Fake canvas tracks removed. We now properly use replaceTrack(null) to mute.
 
 // ─── SVG Icons (replacing MUI icons) ─────────────────────────────────────────
 
@@ -185,10 +167,9 @@ export default function VideoMeet() {
       } else {
         stopLocalTracks();
         if (!inLobby) {
-          const fallback = createBlackSilenceStream();
-          window.localStream = fallback;
-          if (localVideoRef.current) localVideoRef.current.srcObject = fallback;
-          broadcastStreamToPeers(fallback);
+          window.localStream = null;
+          if (localVideoRef.current) localVideoRef.current.srcObject = null;
+          broadcastStreamToPeers(null);
         }
       }
     }
@@ -216,17 +197,29 @@ export default function VideoMeet() {
 
   // ─── Local stream helpers ───────────────────────────────────────────────────
 
-  /** Send local media to a peer: replace existing sender tracks so renegotiation updates remote video. */
+  /** Send local media to a peer using strict transceivers to support replaceTrack(null). */
   function syncOutboundStreamToPeer(pc, stream) {
-    const tracks = stream.getTracks();
-    for (const track of tracks) {
-      const sender = pc.getSenders().find((s) => s.track?.kind === track.kind);
-      if (sender) {
-        sender.replaceTrack(track);
-      } else {
+    if (!stream) {
+      pc.getSenders().forEach((sender) => {
+        if (sender.track) sender.replaceTrack(null);
+      });
+      return;
+    }
+
+    ['audio', 'video'].forEach((kind) => {
+      const track = stream.getTracks().find((t) => t.kind === kind);
+      // Find matching transceiver (pre-created in createPeerConnection)
+      const transceiver = pc.getTransceivers().find((t) => t.receiver.track.kind === kind);
+      if (transceiver) {
+        if (track) {
+          transceiver.sender.replaceTrack(track);
+        } else {
+          transceiver.sender.replaceTrack(null);
+        }
+      } else if (track) {
         pc.addTrack(track, stream);
       }
-    }
+    });
   }
 
   function removePeerConnection(peerId) {
@@ -245,21 +238,22 @@ export default function VideoMeet() {
     window.localStream = stream;
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-    stream.getTracks().forEach((track) => {
-      track.onended = () => {
-        setCameraOn(false);
-        setMicOn(false);
-        const fallback = createBlackSilenceStream();
-        window.localStream = fallback;
-        if (localVideoRef.current) localVideoRef.current.srcObject = fallback;
-        broadcastStreamToPeers(fallback);
-      };
-    });
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        track.onended = () => {
+          setCameraOn(false);
+          setMicOn(false);
+          window.localStream = null;
+          if (localVideoRef.current) localVideoRef.current.srcObject = null;
+          broadcastStreamToPeers(null);
+        };
+      });
+    }
     broadcastStreamToPeers(stream);
   }
 
   function stopLocalTracks() {
-    try { localVideoRef.current?.srcObject?.getTracks().forEach((t) => t.stop()); }
+    try { localVideoRef.current?.srcObject?.getTracks()?.forEach((t) => t.stop()); }
     catch (e) { console.warn(e); }
   }
 
@@ -296,7 +290,7 @@ export default function VideoMeet() {
         .then(applyLocalStream)
         .catch(console.error);
     } else {
-      applyLocalStream(createBlackSilenceStream());
+      applyLocalStream(null);
     }
   }
 
@@ -314,7 +308,7 @@ export default function VideoMeet() {
               .then(applyLocalStream)
               .catch(console.error);
           } else {
-            applyLocalStream(createBlackSilenceStream());
+            applyLocalStream(null);
           }
         };
       });
@@ -396,35 +390,23 @@ export default function VideoMeet() {
     };
 
     pc.ontrack = (event) => {
+      const stream = event.streams[0];
+      if (!stream) return;
       setRemoteStreams((prev) => {
-        const cur = prev.find((v) => v.socketId === peerId);
-        let stream;
-        if (cur?.stream) {
-          stream = cur.stream;
-          stream.getTracks().filter((t) => t.kind === event.track.kind).forEach((t) => {
-            stream.removeTrack(t);
-            t.stop();
-          });
-          stream.addTrack(event.track);
-        } else {
-          stream = event.streams[0] || new MediaStream([event.track]);
+        if (prev.find((v) => v.socketId === peerId && v.stream === stream)) {
+          return prev; // Already tracking this exact stream
         }
-        if (cur) {
-          return prev.map((v) => (v.socketId === peerId ? { ...v, stream } : v));
-        }
-        return [...prev, { socketId: peerId, stream }];
+        return [...prev.filter((v) => v.socketId !== peerId), { socketId: peerId, stream }];
       });
     };
 
-    const streamToSend = window.localStream ?? createBlackSilenceStream();
-    window.localStream = streamToSend;
-    streamToSend.getTracks().forEach((track) => {
-      try {
-        pc.addTrack(track, streamToSend);
-      } catch (e) {
-        console.warn('addTrack:', e);
-      }
-    });
+    // Pre-create transceivers so we can receive media even if sending none
+    pc.addTransceiver('audio', { direction: 'sendrecv' });
+    pc.addTransceiver('video', { direction: 'sendrecv' });
+
+    if (window.localStream) {
+      syncOutboundStreamToPeer(pc, window.localStream);
+    }
     return pc;
   }
 
@@ -508,10 +490,7 @@ export default function VideoMeet() {
 
   function joinMeeting() {
     if (!username.trim()) return;
-    // Ensure a valid local stream exists before establishing socket connection
-    if (!window.localStream || window.localStream.getTracks().every(t => t.readyState === 'ended')) {
-      window.localStream = createBlackSilenceStream();
-    }
+    // Local stream is managed via transceivers natively.
     setInLobby(false);
     connectToServer();
   }
