@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { useParams, useNavigate } from 'react-router-dom';
 import link from '../environment';
 
 
@@ -95,6 +96,8 @@ function ControlBtn({ onClick, active, danger = false, children, badge = 0 }) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function VideoMeet() {
+  const { url } = useParams();
+  const navigate = useNavigate();
   const { user, userAvailable, setUserAvailable, setUser } = useContext(AuthContext);
   const socketRef               = useRef(null);
   const mySocketIdRef           = useRef(null);
@@ -326,7 +329,7 @@ export default function VideoMeet() {
 
     s.on('connect', () => {
       mySocketIdRef.current = s.id;
-      s.emit('join-call', window.location.href);
+      s.emit('join-call', url);
     });
 
     s.on('chat-message', handleIncomingMessage);
@@ -478,7 +481,7 @@ export default function VideoMeet() {
   function sendMessage() {
     if (!draftMessage.trim()) return;
     // Backend expects: ('chat-message', roomId, data, sender)
-    socketRef.current.emit('chat-message', window.location.href, draftMessage, username);
+    socketRef.current.emit('chat-message', url, draftMessage, username);
     setDraftMessage('');
   }
 
@@ -500,7 +503,7 @@ export default function VideoMeet() {
     stopLocalTracks();
     socketRef.current?.disconnect();
     socketRef.current = null;
-    window.location.href = '/';
+    navigate('/');
   }
 
   // ─── Render: Lobby ──────────────────────────────────────────────────────────
